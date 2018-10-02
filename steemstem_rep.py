@@ -6,7 +6,12 @@ import os
 import time
 from datetime import datetime, timedelta
 from operator import itemgetter
-from steem import Steem, post
+from beem.steem import Steem
+from beem.comment import Comment
+from beem.nodelist import NodeList
+from beem.account import Account
+from beem.instance import set_shared_steem_instance
+from beem.utils import addTzInfo
 
 # setup
 half_life_vote = 3.5 * 30 * 24 * 3600.  # 3.5 months - authorship point half-life
@@ -25,9 +30,13 @@ blacklist = []
 # Welcome message
 print("Start of the run on:", time.asctime(time.localtime(time.time())), '\n')
 
-# Get all steemstem votes
-s = Steem()
-all_votes = s.get_account_votes("steemstem")
+# Initialize steem instance, and get all steemstem votes
+n = NodeList()
+n.update_nodes()
+stm = Steem(node=n.get_nodes())
+set_shared_steem_instance(stm)
+steemstem = Account('steemstem')
+all_votes = steemstem.get_account_votes()
 
 
 # Method to get each post reputation value, and adding it to the associated author
@@ -54,7 +63,7 @@ def get_scores(excluded=[]):
                 else:
                     d_time = float(line.split()[5])
                     cd_time = (datetime.now() - datetime.strptime(line.split()[3] + 'T' + line.split()[4],
-                                                                  "%Y-%m-%dT%H:%M:%S")).total_seconds()
+                                                                  "%Y-%m-%dT%H:%M:%S+00:00")).total_seconds()
                     c_len = float(line.split()[2])
                     if c_len > comment_spam_limit and (d_time - cd_time) < comment_timelimit:
                         V_comment = math.sqrt(c_len) * math.exp(-math.log(2.) * cd_time / half_life_comment)
@@ -89,9 +98,10 @@ def get_scores(excluded=[]):
                 comment_file.write(single_vote['authorperm'] + ' null 0 0 0 0\n')
             comment_file.close()
             ## now the main meat
-            all_comments = post.Post.get_replies(post.Post('@' + single_vote['authorperm']))
+            stem_post = Comment(single_vote['authorperm'])
+            all_comments = stem_post.get_replies()# post.Post.get_replies(post.Post('@' + single_vote['authorperm']))
             for single_comment in all_comments:
-                comment_delta_time = (datetime.now() - single_comment['created']).total_seconds()
+                comment_delta_time = (addTzInfo(datetime.utcnow(), 'UTC') - single_comment['created']).total_seconds()
                 if len(single_comment['body']) > comment_spam_limit and (
                         delta_time - comment_delta_time) < comment_timelimit:
                     V_comment = math.sqrt(len(single_comment['body'])) * math.exp(
