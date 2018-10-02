@@ -15,10 +15,9 @@ comment_timelimit = 14 * 24 * 3600.  # 2 weeks - the W number
 comment_spam_limit = 100  # minimum number of characters for a comment to be valid (N)
 comment_filename = 'comments_data.txt'  # where to save the treated comments
 load_backup = True  # Using the file with the saved comments
-normalized_rep = 1000  # Score normalization
+normalized_rep = 1000.  # Score normalization
 
 ## general
-normalized_rep = 1000.
 team = ['null']
 bots = []
 blacklist = []
